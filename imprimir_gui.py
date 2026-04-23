@@ -366,10 +366,10 @@ class PrintApp:
 
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
-        if screen_w <= 1366 or screen_h <= 768:
+        if screen_w <= 1366 and screen_h <= 768:
             self.ui_mode = "compact"
             scale = 0.88
-        elif screen_w <= 1600 or screen_h <= 900:
+        elif screen_w <= 1600 and screen_h <= 900:
             self.ui_mode = "normal"
             scale = 0.96
         else:
@@ -387,6 +387,7 @@ class PrintApp:
             self.fs_status = 14
             self.fs_tanda = 16
             self.step_wrap = 250
+            self.header_height = 70
             self.step1_title = "PASO 1: Preparar"
             self.step2_title = "PASO 2: Frente"
         elif self.ui_mode == "normal":
@@ -398,6 +399,7 @@ class PrintApp:
             self.fs_status = 15
             self.fs_tanda = 19
             self.step_wrap = 290
+            self.header_height = 90
             self.step1_title = "PASO 1: Preparar Tandas"
             self.step2_title = "PASO 2: Imprimir Frente"
         else:
@@ -408,12 +410,13 @@ class PrintApp:
             self.fs_body = 15
             self.fs_status = 16
             self.fs_tanda = 22
+            self.header_height = 110
             self.step_wrap = 360
             self.step1_title = "PASO 1: Preparar Tandas"
             self.step2_title = "PASO 2: Imprimir Frente"
 
         self.root.geometry("1440x840")
-        self.root.minsize(1366, 720)
+        self.root.minsize(1220, 680)
 
         if ICON_PATH.exists():
             try:
@@ -461,7 +464,7 @@ class PrintApp:
         self.root.grid_rowconfigure(1, weight=1)
 
         header = ctk.CTkFrame(self.root, corner_radius=0,
-                              fg_color="#eef3fa", height=90)
+                              fg_color="#eef3fa", height=self.header_height)
         header.grid(row=0, column=0, columnspan=2, sticky="nsew")
         header.grid_columnconfigure(1, weight=1)
 
@@ -1154,29 +1157,40 @@ class PrintApp:
         try:
             doc = fitz.open(str(pdf_path))
             paginas = min(3, doc.page_count)
+            successful_pages = 0
+
             for idx in range(paginas):
-                page = doc.load_page(idx)
-                pix = page.get_pixmap(
-                    matrix=fitz.Matrix(0.35, 0.35), alpha=False)
-                img = Image.frombytes(
-                    "RGB", [pix.width, pix.height], pix.samples)
-                img.thumbnail((260, 330), Image.LANCZOS)
-                tk_img = ImageTk.PhotoImage(img)
-                self.preview_images.append(tk_img)
-                self.preview_labels[idx].configure(image=tk_img, text="")
-                self.preview_labels[idx].image = tk_img
+                try:
+                    page = doc.load_page(idx)
+                    pix = page.get_pixmap(
+                        matrix=fitz.Matrix(0.75, 0.75), alpha=False)
+                    img = Image.frombytes(
+                        "RGB", (pix.width, pix.height), pix.samples)
+                    img.thumbnail((260, 330), Image.LANCZOS)
+                    tk_img = ImageTk.PhotoImage(img)
+                    self.preview_images.append(tk_img)
+                    self.preview_labels[idx].configure(image=tk_img, text="")
+                    self.preview_labels[idx].image = tk_img
+                    successful_pages += 1
+                except Exception as page_exc:
+                    self.preview_labels[idx].configure(
+                        text=f"Pagina {idx+1}\nerror: {page_exc}")
+
             doc.close()
-            self._set_estado("PDF cargado correctamente con previsualizacion")
+            if successful_pages == paginas:
+                self._set_estado("PDF cargado correctamente con previsualizacion")
+            else:
+                self._set_estado(f"PDF cargado: {successful_pages}/{paginas} paginas mostradas")
         except Exception as exc:
             for label in self.preview_labels:
                 label.configure(text=f"Sin previsualizacion\n{exc}")
             self._set_estado(f"fallo en previsualizacion: {exc}")
 
     def _limpiar_preview(self):
-        self.preview_images = []
         for label in self.preview_labels:
             label.image = None
             label.configure(image=None, text="Sin previsualizacion")
+        self.preview_images = []
 
     def _preparar_tandas(self):
         try:
