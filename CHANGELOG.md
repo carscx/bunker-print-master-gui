@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.6] - 2026-04-23
+
+### Changed
+
+- UI redesigned para mejor responsividad en pantallas pequeñas
+- Preview minsize reducido de 340 → 200px
+- Preview cards más compactos (220px vs 260px fijos)
+- Steps panel siempre en 2 columnas (sin apilamiento vertical)
+- Botones de steps más compactos (36-40px vs 54/48px)
+- Status panel comprimido (combine info rows, reduce padding)
+- Font sizes optimizados para compact mode (fs_step_button, fs_step_secondary)
+
+### Result
+
+- Compact mode (1220×680): Muestra PDF completo sin clipping
+- Distribución de altura: Header 70px + Steps 80px + Preview 200px + Status 130px = 480px total
+- Mejor uso del espacio vertical en resoluciones pequeñas
+
 ## [1.2.5] - 2026-04-23
 
 ### Fixed
