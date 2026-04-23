@@ -11,8 +11,8 @@ if (Test-Path $exePath) {
 }
 
 $latestInstaller = Get-ChildItem -Path (Join-Path $root 'installer\Setup-Bunker-Print-Master-GUI-*.exe') -ErrorAction SilentlyContinue |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 1
+Sort-Object LastWriteTime -Descending |
+Select-Object -First 1
 
 if ($latestInstaller) {
     $files += $latestInstaller
