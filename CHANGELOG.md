@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.5] - 2026-04-23
+
+### Fixed
+
+- Previsualización PDF en blanco - aumentado DPI de renderizado (0.35 → 0.75)
+- Manejo de errores en previsualización - ahora muestra páginas parciales cuando una falla
+- Fuga de memoria en gestión de referencias de imágenes de PDF
+- Soporte para pantallas 1360x768 - reducido minsize (1366x720 → 1220x680)
+
+### Changed
+
+- Lógica de detección de resolución: cambio de OR a AND para selección precisa de ui_mode
+- Altura del header ahora adaptativa (compact: 70px, normal: 90px, wide: 110px)
+- Matriz de renderizado PDF mejorada para mejor legibilidad en previsualizaciones
+
 ## [1.2.0] - 2026-04-23
 
 ### Added
