@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Inno Setup output
+installer/*.exe
+installer/SHA256SUMS.txt
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
