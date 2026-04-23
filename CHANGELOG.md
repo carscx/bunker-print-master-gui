@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-04-23
+
+### Added
+
+- Sistema de actualizacion automatica desde GitHub Releases integrado en la GUI.
+- Descarga automatica del instalador mas reciente y ejecucion silenciosa con minima intervencion.
+- Archivo `version.txt` incluido en la app instalada para control de version local.
+
+### Changed
+
+- `build_release.bat` ahora elimina instaladores antiguos antes de generar una nueva release.
+- El instalador Inno Setup cierra/reinicia la app automaticamente durante actualizaciones.
+- Se ampliaron `hiddenimports` para compatibilidad con `pymupdf` y `tkinterdnd2`.
+
 ## [1.0.4] - 2026-04-22
 
 ### Added

@@ -26,6 +26,8 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 UninstallDisplayIcon={app}\{#MyAppExeName}
+CloseApplications=yes
+RestartApplications=yes
 #ifexist "assets\\app.ico"
 SetupIconFile={#MyAppIconFile}
 #endif
@@ -38,6 +40,7 @@ Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; Group
 
 [Files]
 Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "version.txt"; DestDir: "{app}"; Flags: ignoreversion
 #ifexist "assets\\app.ico"
 Source: "assets\app.ico"; DestDir: "{app}\assets"; Flags: ignoreversion
 #endif

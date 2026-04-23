@@ -6,11 +6,26 @@ set "APP_VERSION=%~1"
 set "PY_CMD="
 set "LATEST_INSTALLER="
 
+if "%APP_VERSION%"=="" (
+    for /f "tokens=3" %%I in ('findstr /b /c:"#define MyAppVersion" "%~dp0imprimir_gui_installer.iss"') do set "APP_VERSION=%%~I"
+    set "APP_VERSION=%APP_VERSION:"=%"
+)
+if "%APP_VERSION%"=="" set "APP_VERSION=0.0.0"
+
+echo Preparando release v%APP_VERSION%
+>"%~dp0version.txt" echo %APP_VERSION%
+
+echo Limpiando instaladores antiguos...
+for %%F in ("%~dp0installer\Setup-Bunker-Print-Master-GUI-*.exe") do (
+    if exist "%%~fF" del /q "%%~fF"
+)
+if exist "%~dp0installer\SHA256SUMS.txt" del /q "%~dp0installer\SHA256SUMS.txt"
+
 if exist "..\.venv\Scripts\python.exe" (
     set "PY_CMD=..\.venv\Scripts\python.exe"
 ) else (
     where py >nul 2>nul
-    if %errorlevel%==0 set "PY_CMD=py -3"
+    if not errorlevel 1 set "PY_CMD=py -3"
 )
 
 if "%PY_CMD%"=="" (
@@ -38,17 +53,18 @@ if not "%SIGN_PFX%"=="" (
 )
 
 echo [2/2] Compilando instalador con Inno Setup...
-if "%APP_VERSION%"=="" (
-    call "%~dp0build_installer.bat"
-) else (
-    call "%~dp0build_installer.bat" %APP_VERSION%
-)
+call "%~dp0build_installer.bat" %APP_VERSION%
 if %errorlevel% neq 0 (
     echo Fallo la compilacion del instalador.
     exit /b %errorlevel%
 )
 
-for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "$f = Get-ChildItem -Path '.\installer\Setup-Bunker-Print-Master-GUI-*.exe' | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if ($f) { $f.FullName }"`) do set "LATEST_INSTALLER=%%I"
+for /f "delims=" %%I in ('dir /b /a:-d /o:-d "%~dp0installer\Setup-Bunker-Print-Master-GUI-*.exe" 2^>nul') do (
+    set "LATEST_INSTALLER=%~dp0installer\%%I"
+    goto installer_found
+)
+
+:installer_found
 
 if "%LATEST_INSTALLER%"=="" (
     echo No se encontro instalador para firmar.
@@ -77,3 +93,6 @@ echo Release generada correctamente.
 echo Instalador mas reciente: %LATEST_INSTALLER%
 echo Revisa la carpeta: %~dp0installer
 exit /b 0
+
+
+
