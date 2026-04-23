@@ -448,6 +448,7 @@ class PrintApp:
         self.tandas = []
         self.tanda_actual_idx = -1
         self.etapa_actual = "sin_preparar"
+        self.allow_pdf_selection = True
 
         self.pdf_catalog = []
         self.pdf_records = []
@@ -639,6 +640,7 @@ class PrintApp:
         cfg.grid_columnconfigure(1, weight=3, minsize=220)
         cfg.grid_columnconfigure(2, weight=1)
         cfg.grid_columnconfigure(3, weight=2, minsize=140)
+        self.cfg_panel = cfg
 
         ctk.CTkLabel(cfg, text="PDF", font=ctk.CTkFont("Segoe UI", 15, "bold")).grid(
             row=0, column=0, padx=(14, 8), pady=8, sticky="w"
@@ -667,13 +669,14 @@ class PrintApp:
         )
         self.printer_combo.grid(
             row=1, column=1, columnspan=2, sticky="ew", pady=8)
-        ctk.CTkButton(
+        self.update_printer_button = ctk.CTkButton(
             cfg,
             text="Actualizar",
             width=110,
             height=34,
             command=self._cargar_impresoras,
-        ).grid(row=1, column=3, padx=(8, 14), pady=8, sticky="ew")
+        )
+        self.update_printer_button.grid(row=1, column=3, padx=(8, 14), pady=8, sticky="ew")
 
         ctk.CTkLabel(cfg, text="Pagina inicial", font=ctk.CTkFont("Segoe UI", 15, "bold")).grid(
             row=2, column=0, padx=(14, 8), pady=8, sticky="w"
@@ -693,19 +696,21 @@ class PrintApp:
         ctk.CTkLabel(cfg, textvariable=self.total_paginas, font=ctk.CTkFont("Segoe UI", 15, "bold")).grid(
             row=3, column=0, columnspan=2, padx=14, pady=(4, 10), sticky="w"
         )
-        ctk.CTkButton(
+        self.read_pages_button = ctk.CTkButton(
             cfg,
             text="Leer paginas",
             width=120,
             height=32,
             command=self._leer_paginas_pdf,
-        ).grid(row=3, column=2, columnspan=2, padx=(8, 14), pady=(4, 10), sticky="ew")
+        )
+        self.read_pages_button.grid(row=3, column=2, columnspan=2, padx=(8, 14), pady=(4, 10), sticky="ew")
 
     def _build_pdf_list_panel(self, parent):
         panel = ctk.CTkFrame(parent, corner_radius=14, fg_color="#ffffff")
         panel.grid(row=2, column=0, sticky="nsew", padx=14, pady=(8, 14))
         panel.grid_rowconfigure(2, weight=1)
         panel.grid_columnconfigure(0, weight=1)
+        self.pdf_list_panel = panel
 
         ctk.CTkLabel(
             panel,
@@ -763,6 +768,7 @@ class PrintApp:
         ybar.grid(row=0, column=2, sticky="ns")
 
         self.name_tree.bind("<<TreeviewSelect>>", self._on_select_pdf)
+        self.pdf_tree.bind("<<TreeviewSelect>>", self._on_select_pdf)
 
     def _build_step_panel(self, parent):
         top = ctk.CTkFrame(parent, corner_radius=14, fg_color="#ffffff")
@@ -791,14 +797,15 @@ class PrintApp:
         )
         self.prepare_button.pack(fill="x", padx=12, pady=(10, 8))
 
-        ctk.CTkLabel(
+        self.help_step1_label = ctk.CTkLabel(
             step1,
             text="Click para actualizar el PDF con la separacion\ny habilitar el siguiente paso.",
             justify="left",
             wraplength=self.step_wrap,
             font=ctk.CTkFont("Segoe UI", self.fs_step_secondary),
             text_color="#334155",
-        ).pack(anchor="w", padx=14, pady=(0, 10))
+        )
+        self.help_step1_label.pack(anchor="w", padx=14, pady=(0, 10))
 
         self.frente_button = ctk.CTkButton(
             step2,
@@ -822,14 +829,15 @@ class PrintApp:
         self.dorso_button.grid(
             row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
 
-        ctk.CTkLabel(
+        self.help_step2_label = ctk.CTkLabel(
             step2,
             text="Usa estas para imprimir un lado a la vez y evitar atascos.",
             justify="left",
             wraplength=self.step_wrap,
             font=ctk.CTkFont("Segoe UI", self.fs_step_secondary),
             text_color="#334155",
-        ).grid(row=2, column=0, sticky="w", padx=14, pady=(0, 10))
+        )
+        self.help_step2_label.grid(row=2, column=0, sticky="w", padx=14, pady=(0, 10))
 
     def _build_preview_and_status_panel(self, parent):
         bottom = ctk.CTkFrame(parent, corner_radius=14, fg_color="#ffffff")
@@ -924,18 +932,26 @@ class PrintApp:
         )
         self.estado_msg.grid(row=0, column=0, columnspan=3,
                              sticky="w", padx=12, pady=(12, 6))
+        self.help_status_label = ctk.CTkLabel(
+            status_wrap,
+            text="Ayuda: Carga un PDF, pulsa Leer páginas y sigue los pasos en orden.",
+            font=ctk.CTkFont("Segoe UI", max(11, self.fs_step_secondary)),
+            text_color="#475569",
+        )
+        self.help_status_label.grid(row=1, column=0, columnspan=3,
+                                    sticky="w", padx=12, pady=(0, 4))
 
         self.info_pdf = ctk.CTkLabel(
             status_wrap, text="PDF: -", font=ctk.CTkFont("Segoe UI", 12))
         self.info_impresora = ctk.CTkLabel(
             status_wrap, text="Impresora actual: -", font=ctk.CTkFont("Segoe UI", 12))
-        self.info_pdf.grid(row=1, column=0, columnspan=2,
+        self.info_pdf.grid(row=2, column=0, columnspan=2,
                            sticky="w", padx=12, pady=2)
         self.info_impresora.grid(
-            row=1, column=2, columnspan=1, sticky="w", padx=12, pady=2)
+            row=2, column=2, columnspan=1, sticky="w", padx=12, pady=2)
 
         self.progress = ctk.CTkProgressBar(status_wrap)
-        self.progress.grid(row=2, column=0, columnspan=3,
+        self.progress.grid(row=3, column=0, columnspan=3,
                            sticky="ew", padx=12, pady=(6, 8))
         self.progress.set(0)
 
@@ -962,11 +978,11 @@ class PrintApp:
             hover_color="#475569",
         )
 
-        self.ok_button.grid(row=3, column=0, padx=(12, 8),
+        self.ok_button.grid(row=4, column=0, padx=(12, 8),
                             pady=(6, 8), sticky="ew")
-        self.stop_button.grid(row=3, column=1, padx=8,
+        self.stop_button.grid(row=4, column=1, padx=8,
                               pady=(6, 8), sticky="ew")
-        self.reset_button.grid(row=3, column=2, padx=(
+        self.reset_button.grid(row=4, column=2, padx=(
             8, 12), pady=(6, 8), sticky="ew")
 
         self.update_button = ctk.CTkButton(
@@ -977,8 +993,9 @@ class PrintApp:
             fg_color="#166534",
             hover_color="#14532d",
         )
-        self.update_button.grid(row=4, column=0, columnspan=3,
+        self.update_button.grid(row=5, column=0, columnspan=3,
                                 padx=12, pady=(0, 10), sticky="ew")
+        self.status_panel = status_wrap
 
     def _sync_scroll(self, *args):
         self.name_tree.yview(*args)
@@ -999,6 +1016,18 @@ class PrintApp:
     def _set_estado(self, mensaje):
         self.estado_msg.configure(text=f"Estado: {mensaje}")
 
+    def _set_help_message(self, step1, step2, status, level="info"):
+        palette = {
+            "info": ("ℹ", "#475569"),
+            "warn": ("⚠", "#b45309"),
+            "action": ("▶", "#1d4ed8"),
+            "ok": ("✓", "#166534"),
+        }
+        icon, color = palette.get(level, palette["info"])
+        self.help_step1_label.configure(text=f"{icon} {step1}", text_color=color)
+        self.help_step2_label.configure(text=f"{icon} {step2}", text_color=color)
+        self.help_status_label.configure(text=f"{icon} {status}", text_color=color)
+
     def _buscar_actualizacion(self):
         self.update_button.configure(
             state="disabled", text="Buscando actualizacion...")
@@ -1017,7 +1046,7 @@ class PrintApp:
                 self.root.after(
                     0,
                     lambda: self._resultado_actualizacion(
-                        f"No hay actualizaciones. Version actual: v{self.version_local}",
+                        f"No hay actualizaciones. Version actual: v{self.version_local} (ultima: v{latest['version']})",
                         habilitar=True,
                     ),
                 )
@@ -1045,10 +1074,13 @@ class PrintApp:
                 ),
             )
         except Exception as exc:
+            detalle = str(exc).strip()
+            if not detalle or detalle.lower() == "none":
+                detalle = f"{type(exc).__name__} sin detalle"
             self.root.after(
                 0,
                 lambda: self._resultado_actualizacion(
-                    f"No se pudo actualizar automaticamente: {exc}",
+                    f"No se pudo actualizar automaticamente: {detalle}",
                     habilitar=True,
                 ),
             )
@@ -1144,11 +1176,16 @@ class PrintApp:
         self._render_preview(record["path"])
 
     def _on_select_pdf(self, _event):
+        if not self.allow_pdf_selection:
+            return
         selected = self.name_tree.selection()
+        if not selected:
+            selected = self.pdf_tree.selection()
         if not selected:
             return
         iid = selected[0]
         self.pdf_tree.selection_set(iid)
+        self.name_tree.selection_set(iid)
         idx = int(iid.split("_")[1])
         if 0 <= idx < len(self.pdf_records):
             self._usar_record(self.pdf_records[idx])
@@ -1178,6 +1215,9 @@ class PrintApp:
         self._actualizar_info_panel()
         self.preview_page_offset = 0
         self._render_preview(archivo)
+        if self.etapa_actual == "sin_preparar":
+            self.etapa_actual = "config_confirmada"
+        self._actualizar_controles()
 
     def _render_preview(self, pdf_path, page_offset=0):
         self._limpiar_preview()
@@ -1402,22 +1442,116 @@ class PrintApp:
         self.progress.set((actual - 1) / total_tandas)
 
     def _actualizar_controles(self):
-        lista_para_frente = self.etapa_actual == "lista_para_frente"
-        lista_para_dorso = self.etapa_actual == "lista_para_dorso"
-        pendiente = self.etapa_actual == "pendiente_confirmacion"
+        estado = self.etapa_actual
+        estado_1 = estado == "sin_preparar"
+        estado_2 = estado == "config_confirmada"
+        estado_3 = estado in {"lista_para_frente", "lista_para_dorso", "pendiente_confirmacion", "detenido", "finalizado"}
 
-        self.prepare_button.configure(state="normal")
-        self.frente_button.configure(
-            state="normal" if lista_para_frente else "disabled")
-        self.dorso_button.configure(
-            state="normal" if lista_para_dorso else "disabled")
-        self.ok_button.configure(state="normal" if pendiente else "disabled")
+        lista_para_frente = estado == "lista_para_frente"
+        lista_para_dorso = estado == "lista_para_dorso"
+        pendiente = estado == "pendiente_confirmacion"
+
+        self.allow_pdf_selection = estado_1
+        try:
+            tree_state = "disabled" if not estado_1 else "!disabled"
+            self.name_tree.state((tree_state,))
+            self.pdf_tree.state((tree_state,))
+        except Exception:
+            pass
+
+        config_enabled = estado_1
+        for w in (self.pdf_entry, self.printer_combo, self.entry_inicio, self.entry_tanda):
+            w.configure(state="normal" if config_enabled else "disabled")
+        self.update_printer_button.configure(state="normal" if config_enabled else "disabled")
+        self.read_pages_button.configure(state="normal" if estado_1 else "disabled",
+                                         fg_color="#2f79b7" if estado_1 else "#94a3b8",
+                                         hover_color="#245f91" if estado_1 else "#94a3b8")
+
+        self.prepare_button.configure(state="normal" if estado_2 else "disabled",
+                                      fg_color="#2f79b7" if estado_2 else "#94a3b8",
+                                      hover_color="#245f91" if estado_2 else "#94a3b8")
+
+        self.frente_button.configure(state="normal" if lista_para_frente else "disabled",
+                                     fg_color="#2f79b7" if lista_para_frente else "#94a3b8",
+                                     hover_color="#245f91" if lista_para_frente else "#94a3b8")
+        self.dorso_button.configure(state="normal" if lista_para_dorso else "disabled",
+                                    fg_color="#2f79b7" if lista_para_dorso else "#94a3b8",
+                                    hover_color="#245f91" if lista_para_dorso else "#94a3b8")
+
+        self.ok_button.configure(state="normal" if pendiente else "disabled",
+                                 fg_color="#2f79b7" if pendiente else "#94a3b8",
+                                 hover_color="#245f91" if pendiente else "#94a3b8")
         self.stop_button.configure(
-            state="normal"
-            if self.etapa_actual in {"lista_para_frente", "lista_para_dorso", "pendiente_confirmacion", "detenido"}
-            else "disabled"
+            state="normal" if estado_3 else "disabled",
+            fg_color="#b45309" if estado_3 else "#94a3b8",
+            hover_color="#92400e" if estado_3 else "#94a3b8",
         )
-        self.reset_button.configure(state="normal")
+        self.reset_button.configure(state="normal" if estado_3 else "disabled",
+                                    fg_color="#64748b" if estado_3 else "#94a3b8",
+                                    hover_color="#475569" if estado_3 else "#94a3b8")
+        self.update_button.configure(state="normal",
+                                     fg_color="#166534",
+                                     hover_color="#14532d")
+
+        nav_state = "normal" if estado_3 else "disabled"
+        self.preview_prev_button.configure(state=nav_state)
+        self.preview_next_button.configure(state=nav_state)
+        if estado_3:
+            self._update_preview_nav_buttons()
+
+        # Atenuacion de paneles por paso actual.
+        self.cfg_panel.configure(fg_color="#eaf0f7" if estado_1 else "#f1f5f9")
+        self.pdf_list_panel.configure(fg_color="#ffffff" if estado_1 else "#f8fafc")
+        self.step1_frame.configure(fg_color="#dfeaf8" if estado_2 else "#e5e7eb")
+        self.step2_frame.configure(
+            fg_color="#dfeaf8" if estado in {"lista_para_frente", "lista_para_dorso", "pendiente_confirmacion"} else "#e5e7eb"
+        )
+        self.preview_wrap.configure(fg_color="#ecf2f8" if estado_3 else "#e5e7eb")
+        self.preview_nav_frame.configure(fg_color="#f0f4f8" if estado_3 else "#e5e7eb")
+        self.status_panel.configure(fg_color="#eef3f9" if estado_3 else "#e5e7eb")
+
+        if estado_1:
+            self._set_help_message(
+                "1) Pulsa Leer páginas para confirmar configuración.",
+                "Paso 2 bloqueado hasta preparar tandas.",
+                "Carga un PDF y pulsa Leer páginas.",
+                level="action",
+            )
+        elif estado_2:
+            self._set_help_message(
+                "2) Pulsa Preparar Tandas para generar el lote.",
+                "Paso 2 se habilita después de preparar tandas.",
+                "Configuración lista. Prepara tandas para continuar.",
+                level="action",
+            )
+        elif lista_para_frente:
+            self._set_help_message(
+                "Paso 1 completado.",
+                "3) Imprime Frente. Luego se habilita Imprimir Dorso.",
+                "Revisa la previsualización antes de imprimir.",
+                level="action",
+            )
+        elif lista_para_dorso:
+            self._set_help_message(
+                "Paso 1 completado.",
+                "4) Voltea las hojas y pulsa Imprimir Dorso.",
+                "Tras dorso, confirma tanda correcta / siguiente.",
+                level="warn",
+            )
+        elif pendiente:
+            self._set_help_message(
+                "Paso 1 completado.",
+                "5) Confirma la tanda para avanzar a la siguiente.",
+                "Usa Detener y Revisar si detectas un problema.",
+                level="warn",
+            )
+        else:
+            self._set_help_message(
+                "Paso 1 completado.",
+                "Paso 2 listo para continuar.",
+                "Puedes reiniciar el proceso o continuar.",
+                level="ok",
+            )
 
     def run(self):
         self.root.mainloop()

@@ -7,6 +7,12 @@ if not exist "%~dp0dist\imprimir_gui.exe" goto no_dist
 set "APP_VERSION=%~1"
 set "ISCC_EXE="
 
+if "%APP_VERSION%"=="" (
+    if exist "%~dp0version.txt" (
+        set /p APP_VERSION=<"%~dp0version.txt"
+    )
+)
+
 where iscc >nul 2>nul
 if %errorlevel%==0 for /f "delims=" %%I in ('where iscc') do set "ISCC_EXE=%%I"
 
@@ -28,16 +34,12 @@ exit /b 1
 :found_iscc
 
 echo Usando: %ISCC_EXE%
-if "%APP_VERSION%"=="" goto run_default
+if "%APP_VERSION%"=="" set "APP_VERSION=0.0.0"
 
 echo Compilando instalador version %APP_VERSION%
 "%ISCC_EXE%" /DMyAppVersion=%APP_VERSION% "%~dp0imprimir_gui_installer.iss"
 if %errorlevel% neq 0 goto build_failed
 goto done
-
-:run_default
-"%ISCC_EXE%" "%~dp0imprimir_gui_installer.iss"
-if %errorlevel% neq 0 goto build_failed
 
 :done
 echo Instalador generado en: %~dp0installer

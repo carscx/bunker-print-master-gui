@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-04-23
+
+### Changed
+
+- Se elimina del arbol de trabajo el contenido auxiliar de `/.claude/worktrees/` para evitar desalineaciones entre fuentes de cambio.
+- Se unifica el flujo de build sobre la rama principal (`main`) y una unica fuente de version.
+- Se prepara la release minor `1.3.0` para distribucion y pruebas de instalador.
+
+### Result
+
+- El instalador se genera con version minor nueva (`1.3.0`).
+- Flujo de release mas predecible y sin worktrees anidados en el directorio del proyecto.
+
 ## [1.2.7] - 2026-04-23
 
 ### Added

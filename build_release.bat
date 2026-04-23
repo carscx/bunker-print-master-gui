@@ -7,8 +7,9 @@ set "PY_CMD="
 set "LATEST_INSTALLER="
 
 if "%APP_VERSION%"=="" (
-    for /f "tokens=3" %%I in ('findstr /b /c:"#define MyAppVersion" "%~dp0imprimir_gui_installer.iss"') do set "APP_VERSION=%%~I"
-    set "APP_VERSION=%APP_VERSION:"=%"
+    if exist "%~dp0version.txt" (
+        set /p APP_VERSION=<"%~dp0version.txt"
+    )
 )
 if "%APP_VERSION%"=="" set "APP_VERSION=0.0.0"
 
