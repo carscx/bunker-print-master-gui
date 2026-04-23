@@ -381,36 +381,48 @@ class PrintApp:
         if self.ui_mode == "compact":
             self.fs_title = 30
             self.fs_subtitle = 14
-            self.fs_step_main = 14
-            self.fs_step_secondary = 13
+            self.fs_step_main = 11
+            self.fs_step_secondary = 10
             self.fs_body = 13
             self.fs_status = 14
             self.fs_tanda = 16
-            self.step_wrap = 250
+            self.fs_step_button = 10
+            self.step_wrap = 200
             self.header_height = 70
+            self.step_height = 36
+            self.status_button_height = 32
+            self.status_padding = (4, 6)
             self.step1_title = "PASO 1: Preparar"
             self.step2_title = "PASO 2: Frente"
         elif self.ui_mode == "normal":
             self.fs_title = 38
             self.fs_subtitle = 16
-            self.fs_step_main = 17
-            self.fs_step_secondary = 15
+            self.fs_step_main = 14
+            self.fs_step_secondary = 12
             self.fs_body = 14
             self.fs_status = 15
             self.fs_tanda = 19
+            self.fs_step_button = 11
             self.step_wrap = 290
             self.header_height = 90
+            self.step_height = 40
+            self.status_button_height = 40
+            self.status_padding = (8, 10)
             self.step1_title = "PASO 1: Preparar Tandas"
             self.step2_title = "PASO 2: Imprimir Frente"
         else:
             self.fs_title = 46
             self.fs_subtitle = 18
-            self.fs_step_main = 20
-            self.fs_step_secondary = 17
+            self.fs_step_main = 17
+            self.fs_step_secondary = 15
             self.fs_body = 15
             self.fs_status = 16
             self.fs_tanda = 22
+            self.fs_step_button = 12
             self.header_height = 110
+            self.step_height = 44
+            self.status_button_height = 40
+            self.status_padding = (8, 10)
             self.step_wrap = 360
             self.step1_title = "PASO 1: Preparar Tandas"
             self.step2_title = "PASO 2: Imprimir Frente"
@@ -767,38 +779,38 @@ class PrintApp:
         self.prepare_button = ctk.CTkButton(
             step1,
             text=self.step1_title,
-            height=54,
+            height=self.step_height,
             corner_radius=10,
             font=ctk.CTkFont("Segoe UI", self.fs_step_main, "bold"),
             command=self._preparar_tandas,
             fg_color="#2f79b7",
             hover_color="#245f91",
         )
-        self.prepare_button.pack(fill="x", padx=12, pady=(12, 10))
+        self.prepare_button.pack(fill="x", padx=12, pady=(10, 8))
 
         ctk.CTkLabel(
             step1,
             text="Click para actualizar el PDF con la separacion\ny habilitar el siguiente paso.",
             justify="left",
             wraplength=self.step_wrap,
-            font=ctk.CTkFont("Segoe UI", self.fs_body),
+            font=ctk.CTkFont("Segoe UI", self.fs_step_secondary),
             text_color="#334155",
-        ).pack(anchor="w", padx=14, pady=(0, 12))
+        ).pack(anchor="w", padx=14, pady=(0, 10))
 
         self.frente_button = ctk.CTkButton(
             step2,
             text=self.step2_title,
-            height=48,
+            height=self.step_height,
             font=ctk.CTkFont("Segoe UI", self.fs_step_main, "bold"),
             command=self._imprimir_frente,
         )
         self.frente_button.grid(
-            row=0, column=0, sticky="ew", padx=12, pady=(12, 8))
+            row=0, column=0, sticky="ew", padx=12, pady=(10, 6))
 
         self.dorso_button = ctk.CTkButton(
             step2,
             text="Imprimir Dorso",
-            height=44,
+            height=self.step_height,
             font=ctk.CTkFont("Segoe UI", self.fs_step_secondary, "bold"),
             command=self._imprimir_dorso,
             fg_color="#6b8cad",
@@ -812,28 +824,9 @@ class PrintApp:
             text="Usa estas para imprimir un lado a la vez y evitar atascos.",
             justify="left",
             wraplength=self.step_wrap,
-            font=ctk.CTkFont("Segoe UI", self.fs_body),
+            font=ctk.CTkFont("Segoe UI", self.fs_step_secondary),
             text_color="#334155",
-        ).grid(row=2, column=0, sticky="w", padx=14, pady=(0, 12))
-
-        self.steps_top.bind("<Configure>", self._on_steps_resize)
-
-    def _on_steps_resize(self, _event=None):
-        if not hasattr(self, "steps_top"):
-            return
-        width = self.steps_top.winfo_width()
-        if width < 780:
-            self.step1_frame.grid_configure(
-                row=0, column=0, padx=12, pady=(12, 8), sticky="ew")
-            self.step2_frame.grid_configure(
-                row=1, column=0, padx=12, pady=(0, 12), sticky="ew")
-            self.steps_top.grid_columnconfigure(1, weight=0)
-        else:
-            self.step1_frame.grid_configure(
-                row=0, column=0, padx=(12, 8), pady=12, sticky="nsew")
-            self.step2_frame.grid_configure(
-                row=0, column=1, padx=(8, 12), pady=12, sticky="nsew")
-            self.steps_top.grid_columnconfigure(1, weight=1)
+        ).grid(row=2, column=0, sticky="w", padx=14, pady=(0, 10))
 
     def _build_preview_and_status_panel(self, parent):
         bottom = ctk.CTkFrame(parent, corner_radius=14, fg_color="#ffffff")
@@ -854,15 +847,18 @@ class PrintApp:
             bottom, corner_radius=10, fg_color="#ecf2f8")
         preview_wrap.grid(row=1, column=0, sticky="nsew",
                           padx=12, pady=(0, 10))
-        preview_wrap.grid_rowconfigure(0, weight=1, minsize=340)
+        preview_wrap.grid_rowconfigure(0, weight=1, minsize=200)
         preview_wrap.grid_columnconfigure((0, 1, 2), weight=1)
 
         self.preview_labels = []
+        self.preview_wrap = preview_wrap
+        self.preview_card_width = 220
+        self.preview_card_height = 280
         for col in range(3):
             card = tk.Frame(preview_wrap, bg="#ffffff", highlightthickness=0)
-            card.grid(row=0, column=col, padx=10, pady=12, sticky="nsew")
+            card.grid(row=0, column=col, padx=8, pady=10, sticky="nsew")
             card.grid_propagate(False)
-            card.configure(width=260, height=330)
+            card.configure(width=self.preview_card_width, height=self.preview_card_height)
 
             box = tk.Label(
                 card,
@@ -893,30 +889,30 @@ class PrintApp:
                              sticky="w", padx=12, pady=(12, 6))
 
         self.info_pdf = ctk.CTkLabel(
-            status_wrap, text="PDF: -", font=ctk.CTkFont("Segoe UI", self.fs_body))
+            status_wrap, text="PDF: -", font=ctk.CTkFont("Segoe UI", 12))
         self.info_impresora = ctk.CTkLabel(
-            status_wrap, text="Impresora actual: -", font=ctk.CTkFont("Segoe UI", self.fs_body))
-        self.info_pdf.grid(row=1, column=0, columnspan=3,
+            status_wrap, text="Impresora actual: -", font=ctk.CTkFont("Segoe UI", 12))
+        self.info_pdf.grid(row=1, column=0, columnspan=2,
                            sticky="w", padx=12, pady=2)
         self.info_impresora.grid(
-            row=2, column=0, columnspan=3, sticky="w", padx=12, pady=2)
+            row=1, column=2, columnspan=1, sticky="w", padx=12, pady=2)
 
         self.progress = ctk.CTkProgressBar(status_wrap)
-        self.progress.grid(row=3, column=0, columnspan=3,
-                           sticky="ew", padx=12, pady=(8, 10))
+        self.progress.grid(row=2, column=0, columnspan=3,
+                           sticky="ew", padx=12, pady=(6, 8))
         self.progress.set(0)
 
         self.ok_button = ctk.CTkButton(
             status_wrap,
             text="Tanda correcta / siguiente",
             command=self._confirmar_tanda,
-            height=40,
+            height=self.status_button_height,
         )
         self.stop_button = ctk.CTkButton(
             status_wrap,
             text="Detener y Revisar",
             command=self._detener_proceso,
-            height=40,
+            height=self.status_button_height,
             fg_color="#b45309",
             hover_color="#92400e",
         )
@@ -924,28 +920,28 @@ class PrintApp:
             status_wrap,
             text="Reiniciar Proceso",
             command=self._reiniciar_estado,
-            height=40,
+            height=self.status_button_height,
             fg_color="#64748b",
             hover_color="#475569",
         )
 
-        self.ok_button.grid(row=4, column=0, padx=(12, 8),
-                            pady=(0, 12), sticky="ew")
-        self.stop_button.grid(row=4, column=1, padx=8,
-                              pady=(0, 12), sticky="ew")
-        self.reset_button.grid(row=4, column=2, padx=(
-            8, 12), pady=(0, 12), sticky="ew")
+        self.ok_button.grid(row=3, column=0, padx=(12, 8),
+                            pady=(6, 8), sticky="ew")
+        self.stop_button.grid(row=3, column=1, padx=8,
+                              pady=(6, 8), sticky="ew")
+        self.reset_button.grid(row=3, column=2, padx=(
+            8, 12), pady=(6, 8), sticky="ew")
 
         self.update_button = ctk.CTkButton(
             status_wrap,
             text=f"Actualizar app (v{self.version_local})",
             command=self._buscar_actualizacion,
-            height=38,
+            height=self.status_button_height,
             fg_color="#166534",
             hover_color="#14532d",
         )
-        self.update_button.grid(row=5, column=0, columnspan=3,
-                                padx=12, pady=(0, 12), sticky="ew")
+        self.update_button.grid(row=4, column=0, columnspan=3,
+                                padx=12, pady=(0, 10), sticky="ew")
 
     def _sync_scroll(self, *args):
         self.name_tree.yview(*args)
@@ -1159,6 +1155,9 @@ class PrintApp:
             paginas = min(3, doc.page_count)
             successful_pages = 0
 
+            thumb_width = int(self.preview_card_width * 0.85)
+            thumb_height = int(thumb_width * 1.27)
+
             for idx in range(paginas):
                 try:
                     page = doc.load_page(idx)
@@ -1166,7 +1165,7 @@ class PrintApp:
                         matrix=fitz.Matrix(0.75, 0.75), alpha=False)
                     img = Image.frombytes(
                         "RGB", (pix.width, pix.height), pix.samples)
-                    img.thumbnail((260, 330), Image.LANCZOS)
+                    img.thumbnail((thumb_width, thumb_height), Image.LANCZOS)
                     tk_img = ImageTk.PhotoImage(img)
                     self.preview_images.append(tk_img)
                     self.preview_labels[idx].configure(image=tk_img, text="")
