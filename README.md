@@ -33,6 +33,7 @@ Sigue la guia paso a paso en [INSTALLACION_WINDOWS.md](INSTALLACION_WINDOWS.md).
 - [build_installer.bat](build_installer.bat): compila solo instalador.
 - [sign_release.bat](sign_release.bat): firma digital opcional.
 - [create_checksums.bat](create_checksums.bat): genera SHA256SUMS.txt.
+- [assets/README.md](assets/README.md): guia para icono del exe e instalador.
 
 ## Compilar una release
 

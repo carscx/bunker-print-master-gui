@@ -5,6 +5,12 @@
 1. En GitHub, crear un repositorio nuevo, por ejemplo: `bunker-print-master-gui`.
 2. No inicializar con README desde GitHub (este proyecto ya lo tiene).
 
+## 1.1) Preparar icono de la aplicacion
+
+1. Copiar el logo en formato `.ico` a `assets/app.ico`.
+2. Si tienes logo en `.png`, convertirlo a `.ico` antes de compilar release.
+3. El build aplicara ese icono al `.exe`, al instalador y a los accesos directos.
+
 ## 2) Primer commit local
 
 En esta carpeta (`impresion-tandas`):

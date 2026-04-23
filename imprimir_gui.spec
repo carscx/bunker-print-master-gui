@@ -1,4 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+
+
+ICON_PATH = 'assets/app.ico' if os.path.exists('assets/app.ico') else None
 
 
 a = Analysis(
@@ -35,4 +39,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=ICON_PATH,
 )
