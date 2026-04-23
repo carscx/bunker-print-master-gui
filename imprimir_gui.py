@@ -452,6 +452,9 @@ class PrintApp:
         self.pdf_catalog = []
         self.pdf_records = []
         self.preview_images = []
+        self.preview_page_offset = 0
+        self.preview_total_pages = 0
+        self.preview_current_pdf = None
 
         self.logo_header = self._load_ctk_image(LOGO_PATH, (52, 52))
         self.drop_active = False
@@ -874,9 +877,43 @@ class PrintApp:
             box.pack(fill="both", expand=True)
             self.preview_labels.append(box)
 
+        nav_frame = ctk.CTkFrame(bottom, corner_radius=10, fg_color="#f0f4f8")
+        nav_frame.grid(row=2, column=0, sticky="ew", padx=12, pady=(8, 8))
+        nav_frame.grid_columnconfigure((0, 1, 2), weight=1)
+
+        self.preview_prev_button = ctk.CTkButton(
+            nav_frame,
+            text="← Anterior",
+            height=self.status_button_height,
+            command=self._preview_prev_page,
+            fg_color="#1e40af",
+            hover_color="#1e3a8a",
+        )
+        self.preview_prev_button.grid(row=0, column=0, padx=(12, 8), pady=6, sticky="ew")
+
+        self.preview_page_label = ctk.CTkLabel(
+            nav_frame,
+            text="Página 1 de 0",
+            font=ctk.CTkFont("Segoe UI", self.fs_body),
+            text_color="#475569",
+        )
+        self.preview_page_label.grid(row=0, column=1, padx=8, pady=6)
+
+        self.preview_next_button = ctk.CTkButton(
+            nav_frame,
+            text="Siguiente →",
+            height=self.status_button_height,
+            command=self._preview_next_page,
+            fg_color="#1e40af",
+            hover_color="#1e3a8a",
+        )
+        self.preview_next_button.grid(row=0, column=2, padx=(8, 12), pady=6, sticky="ew")
+
+        self.preview_nav_frame = nav_frame
+
         status_wrap = ctk.CTkFrame(
             bottom, corner_radius=10, fg_color="#eef3f9")
-        status_wrap.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 12))
+        status_wrap.grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 12))
         status_wrap.grid_columnconfigure((0, 1, 2), weight=1)
 
         self.estado_msg = ctk.CTkLabel(
@@ -1139,9 +1176,10 @@ class PrintApp:
         self.total_paginas.set(f"Total de paginas: {total}")
         self._set_estado("PDF cargado correctamente")
         self._actualizar_info_panel()
+        self.preview_page_offset = 0
         self._render_preview(archivo)
 
-    def _render_preview(self, pdf_path):
+    def _render_preview(self, pdf_path, page_offset=0):
         self._limpiar_preview()
 
         if not fitz:
@@ -1152,15 +1190,24 @@ class PrintApp:
 
         try:
             doc = fitz.open(str(pdf_path))
-            paginas = min(3, doc.page_count)
-            successful_pages = 0
+            self.preview_total_pages = doc.page_count
+            self.preview_current_pdf = str(pdf_path)
 
+            paginas = min(3, doc.page_count - page_offset)
+
+            if paginas <= 0:
+                page_offset = 0
+                self.preview_page_offset = 0
+                paginas = min(3, doc.page_count)
+
+            successful_pages = 0
             thumb_width = int(self.preview_card_width * 0.85)
             thumb_height = int(thumb_width * 1.27)
 
             for idx in range(paginas):
                 try:
-                    page = doc.load_page(idx)
+                    actual_page_idx = page_offset + idx
+                    page = doc.load_page(actual_page_idx)
                     pix = page.get_pixmap(
                         matrix=fitz.Matrix(0.75, 0.75), alpha=False)
                     img = Image.frombytes(
@@ -1173,13 +1220,15 @@ class PrintApp:
                     successful_pages += 1
                 except Exception as page_exc:
                     self.preview_labels[idx].configure(
-                        text=f"Pagina {idx+1}\nerror: {page_exc}")
+                        text=f"Pagina {actual_page_idx + 1}\nerror: {page_exc}")
 
             doc.close()
+            self._update_preview_nav_buttons()
+
             if successful_pages == paginas:
-                self._set_estado("PDF cargado correctamente con previsualizacion")
+                self._set_estado(f"Páginas {page_offset + 1}-{page_offset + successful_pages} de {self.preview_total_pages}")
             else:
-                self._set_estado(f"PDF cargado: {successful_pages}/{paginas} paginas mostradas")
+                self._set_estado(f"Páginas cargadas: {successful_pages}/{paginas}")
         except Exception as exc:
             for label in self.preview_labels:
                 label.configure(text=f"Sin previsualizacion\n{exc}")
@@ -1190,6 +1239,36 @@ class PrintApp:
             label.image = None
             label.configure(image=None, text="Sin previsualizacion")
         self.preview_images = []
+
+    def _preview_prev_page(self):
+        if self.preview_page_offset >= 3:
+            self.preview_page_offset -= 3
+            self._render_preview(self.preview_current_pdf, self.preview_page_offset)
+
+    def _preview_next_page(self):
+        max_offset = max(0, self.preview_total_pages - 1)
+        if self.preview_page_offset + 3 <= max_offset:
+            self.preview_page_offset += 3
+            self._render_preview(self.preview_current_pdf, self.preview_page_offset)
+
+    def _update_preview_nav_buttons(self):
+        if not hasattr(self, 'preview_prev_button'):
+            return
+
+        self.preview_prev_button.configure(
+            state="disabled" if self.preview_page_offset == 0 else "normal"
+        )
+
+        at_end = (self.preview_page_offset + 3) >= self.preview_total_pages
+        self.preview_next_button.configure(
+            state="disabled" if at_end else "normal"
+        )
+
+        first_page = self.preview_page_offset + 1
+        last_page = min(self.preview_page_offset + 3, self.preview_total_pages)
+        self.preview_page_label.configure(
+            text=f"Páginas {first_page}-{last_page} de {self.preview_total_pages}"
+        )
 
     def _preparar_tandas(self):
         try:
