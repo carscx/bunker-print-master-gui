@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.7] - 2026-04-23
+
+### Added
+
+- PDF page navigation in preview panel
+- Previous/Next buttons to browse through PDF pages
+- Page range display (e.g., "Páginas 5-7 de 50")
+- Automatic button disabling at document boundaries
+- Page offset tracking across navigation
+
+### Result
+
+- Users can now navigate through all PDF pages before creating batches
+- Verify exactly what will be printed before batch creation
+- Page navigation resets when loading new PDF
+
 ## [1.2.6] - 2026-04-23
 
 ### Changed
