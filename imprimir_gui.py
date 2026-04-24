@@ -781,12 +781,23 @@ class PrintApp:
         )
         self.read_pages_button = ctk.CTkButton(
             cfg,
-            text="Leer paginas",
+            text="Validar PDF (leer paginas)",
             width=120,
             height=32,
             command=self._leer_paginas_pdf,
         )
         self.read_pages_button.grid(row=3, column=2, columnspan=2, padx=(8, 14), pady=(4, 10), sticky="ew")
+        self.start_process_button = ctk.CTkButton(
+            cfg,
+            text="EMPEZAR PROCESO",
+            height=38,
+            command=self._iniciar_proceso_desde_configuracion,
+            fg_color="#15803d",
+            hover_color="#166534",
+            font=ctk.CTkFont("Segoe UI", 13, "bold"),
+        )
+        self.start_process_button.grid(row=4, column=0, columnspan=4,
+                                       padx=14, pady=(0, 10), sticky="ew")
 
     def _build_pdf_list_panel(self, parent):
         panel = ctk.CTkFrame(parent, corner_radius=14, fg_color="#ffffff")
@@ -1245,11 +1256,23 @@ class PrintApp:
         if primera is None:
             return
 
+        # Cargar un PDF nuevo no debe iniciar proceso de impresion.
+        # Se limpia estado operativo para evitar bloqueos hasta pulsar "Leer paginas".
+        self.tandas = []
+        self.tanda_actual_idx = -1
+        self.etapa_actual = "sin_preparar"
+        self.impresion_iniciada = False
+        self.progress.set(0)
+
         self.archivo_pdf.set(str(primera))
         self._actualizar_registros_pdf()
-        self._leer_paginas_pdf()
+        self._actualizar_info_panel()
+        self._actualizar_controles()
+
         if len(rutas) > 1:
             self._set_estado(f"{agregados} PDF(s) agregados por arrastre")
+        else:
+            self._set_estado("PDF cargado. Pulsa 'Leer paginas' para continuar.")
 
     def _on_delete_pdf_key(self, _event):
         self._eliminar_pdf_seleccionado()
@@ -1355,7 +1378,7 @@ class PrintApp:
         rutas = [Path(p) for p in archivos if p]
         self._agregar_pdfs(rutas)
 
-    def _leer_paginas_pdf(self):
+    def _leer_paginas_pdf(self, avanzar_flujo=False):
         try:
             archivo = self._ruta_pdf_actual()
             total = obtener_total_paginas(archivo)
@@ -1369,9 +1392,12 @@ class PrintApp:
         self._actualizar_info_panel()
         self.preview_page_offset = 0
         self._render_preview(archivo)
-        if self.etapa_actual == "sin_preparar":
+        if avanzar_flujo and self.etapa_actual == "sin_preparar":
             self.etapa_actual = "config_confirmada"
         self._actualizar_controles()
+
+    def _iniciar_proceso_desde_configuracion(self):
+        self._leer_paginas_pdf(avanzar_flujo=True)
 
     def _render_preview(self, pdf_path, page_offset=0):
         self._limpiar_preview()
@@ -1626,6 +1652,12 @@ class PrintApp:
         self.read_pages_button.configure(state="normal" if estado_1 else "disabled",
                                          fg_color="#2f79b7" if estado_1 else "#94a3b8",
                                          hover_color="#245f91" if estado_1 else "#94a3b8")
+        can_start = estado_1 and bool(self.archivo_pdf.get().strip())
+        self.start_process_button.configure(
+            state="normal" if can_start else "disabled",
+            fg_color="#15803d" if can_start else "#94a3b8",
+            hover_color="#166534" if can_start else "#94a3b8",
+        )
         self.remove_pdf_button.configure(
             state="normal" if (estado_1 and len(self.pdf_records) > 0) else "disabled",
             fg_color="#b91c1c" if (estado_1 and len(self.pdf_records) > 0) else "#94a3b8",
@@ -1677,9 +1709,9 @@ class PrintApp:
 
         if estado_1:
             self._set_help_message(
-                "1) Pulsa Leer páginas para confirmar configuración.",
+                "1) Pulsa EMPEZAR PROCESO para iniciar el flujo.",
                 "Paso 2 bloqueado hasta preparar tandas.",
-                "Carga un PDF y pulsa Leer páginas.",
+                "Carga un PDF y pulsa EMPEZAR PROCESO.",
                 level="action",
             )
         elif estado_2:

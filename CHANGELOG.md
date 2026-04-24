@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.2] - 2026-04-24
+
+### Fixed
+
+- Instalador reforzado para cerrar `imprimir_gui.exe` de forma forzada antes de actualizar.
+- Se evita el bloqueo en pantalla de "Cerrar aplicaciones" cuando la app queda abierta.
+- Se filtra el cierre automático al ejecutable de la app para un comportamiento más predecible.
+
 ## [1.4.1] - 2026-04-24
 
 ### Fixed

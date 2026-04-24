@@ -2,6 +2,10 @@
 
 Aplicacion de escritorio para Windows para imprimir PDFs grandes por tandas (frente/dorso) con un flujo guiado y seguro para operador.
 
+## Vista previa
+
+![Vista previa de Bunker Print Master GUI](assets/Screenshot-1.png)
+
 ## Que hace este programa
 
 - Carga uno o varios PDFs por boton o arrastrar y soltar.
@@ -15,7 +19,7 @@ Aplicacion de escritorio para Windows para imprimir PDFs grandes por tandas (fre
 
 1. Cargar PDF(s) y seleccionar impresora.
 2. Definir pagina inicial y hojas por tanda.
-3. Pulsar `Leer paginas`.
+3. Pulsar `EMPEZAR PROCESO`.
 4. Pulsar `PASO 1: Preparar Tandas`.
 5. Imprimir `Frente` y luego `Dorso` segun corresponda.
 6. Confirmar tanda correcta y continuar.

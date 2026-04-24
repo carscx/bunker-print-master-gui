@@ -28,6 +28,7 @@ PrivilegesRequired=lowest
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
 RestartApplications=yes
+CloseApplicationsFilter={#MyAppExeName}
 #ifexist "assets\\app.ico"
 SetupIconFile={#MyAppIconFile}
 #endif
@@ -60,3 +61,35 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Abrir {#MyAppName}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function ForceCloseAppProcess(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  Exec(
+    ExpandConstant('{cmd}'),
+    '/C taskkill /IM {#MyAppExeName} /F /T',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+  // taskkill devuelve 0 si cerró procesos y 128/otros si no había proceso.
+  // No bloqueamos instalación por este resultado.
+end;
+
+function InitializeSetup(): Boolean;
+begin
+  ForceCloseAppProcess();
+  Result := True;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssInstall then
+  begin
+    ForceCloseAppProcess();
+  end;
+end;
