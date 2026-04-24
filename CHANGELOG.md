@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-04-23
+
+### Added
+
+- Boton para eliminar PDFs cargados desde el listado sin borrar el archivo original del disco.
+- Atajo de teclado `Supr` para eliminar el PDF seleccionado del listado.
+- Iconos de ayuda en formato PNG para mejorar la guia visual en cada estado del flujo.
+
+### Changed
+
+- Botones de `Detener y Revisar` y `Reiniciar Proceso` disponibles en cualquier etapa.
+- Selector de impresora habilitado hasta el primer envio real a impresion.
+- Resolucion de rutas de recursos reforzada para modo empaquetado de PyInstaller.
+
+### Fixed
+
+- Prevencion de bloqueos por eventos recursivos al sincronizar seleccion de tablas.
+- Estabilidad del flujo al cargar PDF, reiniciar y volver a seleccionar documento.
+
 ## [1.3.0] - 2026-04-23
 
 ### Changed

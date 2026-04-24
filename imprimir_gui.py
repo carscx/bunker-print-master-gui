@@ -41,11 +41,23 @@ except Exception:
     TkinterDnD = None
 
 
-BASE_DIR = Path(__file__).resolve().parent
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    BASE_DIR = Path(sys.executable).resolve().parent
+    RESOURCE_DIR = Path(sys._MEIPASS)
+else:
+    BASE_DIR = Path(__file__).resolve().parent
+    RESOURCE_DIR = BASE_DIR
+
 WORKSPACE_DIR = BASE_DIR.parent
-ASSETS_DIR = BASE_DIR / "assets"
+ASSETS_DIR = RESOURCE_DIR / "assets"
 LOGO_PATH = ASSETS_DIR / "Logo.png"
 ICON_PATH = ASSETS_DIR / "app.ico"
+HELP_ICON_PATHS = {
+    "info": "info-circle.png",
+    "action": "player-play.png",
+    "warn": "alert-triangle.png",
+    "ok": "circle-check.png",
+}
 SUMATRA_PATH = Path(r"C:\Users\karsc\AppData\Local\SumatraPDF\SumatraPDF.exe")
 OUTPUT_DIR = BASE_DIR / "salidas"
 UPDATE_REPO_OWNER = "carscx"
@@ -449,6 +461,8 @@ class PrintApp:
         self.tanda_actual_idx = -1
         self.etapa_actual = "sin_preparar"
         self.allow_pdf_selection = True
+        self.syncing_tree_selection = False
+        self.impresion_iniciada = False
 
         self.pdf_catalog = []
         self.pdf_records = []
@@ -458,6 +472,12 @@ class PrintApp:
         self.preview_current_pdf = None
 
         self.logo_header = self._load_ctk_image(LOGO_PATH, (52, 52))
+        self.help_icons = {
+            "info": self._load_help_icon("info", (16, 16)),
+            "action": self._load_help_icon("action", (16, 16)),
+            "warn": self._load_help_icon("warn", (16, 16)),
+            "ok": self._load_help_icon("ok", (16, 16)),
+        }
         self.drop_active = False
         self.drop_pulse = False
 
@@ -471,6 +491,33 @@ class PrintApp:
         try:
             img = Image.open(path)
             return ctk.CTkImage(light_image=img, dark_image=img, size=size)
+        except Exception:
+            return None
+
+    def _resolve_asset_path(self, filename):
+        if not filename:
+            return None
+        candidates = [
+            ASSETS_DIR / filename,
+            BASE_DIR / "assets" / filename,
+            Path.cwd() / "assets" / filename,
+            Path(sys.executable).resolve().parent / "assets" / filename,
+        ]
+        for candidate in candidates:
+            try:
+                if candidate.exists():
+                    return candidate
+            except Exception:
+                continue
+        return None
+
+    def _load_help_icon(self, level, size):
+        filename = HELP_ICON_PATHS.get(level)
+        path = self._resolve_asset_path(filename)
+        if not path:
+            return None
+        try:
+            return self._load_ctk_image(path, size)
         except Exception:
             return None
 
@@ -725,6 +772,16 @@ class PrintApp:
             font=ctk.CTkFont("Segoe UI", 14),
             text_color="#5b6675",
         ).grid(row=1, column=0, padx=12, pady=(0, 6), sticky="w")
+        self.remove_pdf_button = ctk.CTkButton(
+            panel,
+            text="Eliminar seleccionado",
+            width=170,
+            height=30,
+            command=self._eliminar_pdf_seleccionado,
+            fg_color="#b91c1c",
+            hover_color="#991b1b",
+        )
+        self.remove_pdf_button.grid(row=1, column=0, padx=12, pady=(0, 6), sticky="e")
 
         style = ttk.Style()
         style.configure("Pdf.Treeview", font=("Segoe UI", 11), rowheight=28)
@@ -769,6 +826,8 @@ class PrintApp:
 
         self.name_tree.bind("<<TreeviewSelect>>", self._on_select_pdf)
         self.pdf_tree.bind("<<TreeviewSelect>>", self._on_select_pdf)
+        self.name_tree.bind("<Delete>", self._on_delete_pdf_key)
+        self.pdf_tree.bind("<Delete>", self._on_delete_pdf_key)
 
     def _build_step_panel(self, parent):
         top = ctk.CTkFrame(parent, corner_radius=14, fg_color="#ffffff")
@@ -1024,9 +1083,28 @@ class PrintApp:
             "ok": ("✓", "#166534"),
         }
         icon, color = palette.get(level, palette["info"])
-        self.help_step1_label.configure(text=f"{icon} {step1}", text_color=color)
-        self.help_step2_label.configure(text=f"{icon} {step2}", text_color=color)
-        self.help_status_label.configure(text=f"{icon} {status}", text_color=color)
+        icon_image = self.help_icons.get(level)
+        self.help_step1_label.configure(
+            text=f"{icon} {step1}" if icon_image is None else step1,
+            text_color=color,
+            image=icon_image,
+            compound="left",
+            anchor="w",
+        )
+        self.help_step2_label.configure(
+            text=f"{icon} {step2}" if icon_image is None else step2,
+            text_color=color,
+            image=icon_image,
+            compound="left",
+            anchor="w",
+        )
+        self.help_status_label.configure(
+            text=f"{icon} {status}" if icon_image is None else status,
+            text_color=color,
+            image=icon_image,
+            compound="left",
+            anchor="w",
+        )
 
     def _buscar_actualizacion(self):
         self.update_button.configure(
@@ -1137,6 +1215,36 @@ class PrintApp:
         if len(rutas) > 1:
             self._set_estado(f"{agregados} PDF(s) agregados por arrastre")
 
+    def _on_delete_pdf_key(self, _event):
+        self._eliminar_pdf_seleccionado()
+        return "break"
+
+    def _iid_pdf_seleccionado(self):
+        selected = self.name_tree.selection()
+        if not selected:
+            selected = self.pdf_tree.selection()
+        if not selected:
+            return None
+        return selected[0]
+
+    def _eliminar_pdf_seleccionado(self):
+        iid = self._iid_pdf_seleccionado()
+        if not iid:
+            self._set_estado("Selecciona un PDF para eliminarlo de la lista")
+            return
+        try:
+            idx = int(iid.split("_")[1])
+        except Exception:
+            self._set_estado("No se pudo identificar el PDF seleccionado")
+            return
+        if idx < 0 or idx >= len(self.pdf_catalog):
+            self._set_estado("Seleccion fuera de rango")
+            return
+
+        eliminado = self.pdf_catalog.pop(idx)
+        self._actualizar_registros_pdf()
+        self._set_estado(f"PDF eliminado de la lista: {eliminado.name}")
+
     def _actualizar_registros_pdf(self):
         try:
             paginas_tanda = max(int(self.paginas_por_tanda.get() or 1), 1)
@@ -1161,8 +1269,12 @@ class PrintApp:
             self.pdf_tree.insert("", "end", iid=iid, values=(hojas, tandas))
 
         if self.pdf_records:
-            self.name_tree.selection_set("row_0")
-            self.pdf_tree.selection_set("row_0")
+            self.syncing_tree_selection = True
+            try:
+                self.name_tree.selection_set("row_0")
+                self.pdf_tree.selection_set("row_0")
+            finally:
+                self.syncing_tree_selection = False
             self._usar_record(self.pdf_records[0])
         else:
             self.archivo_pdf.set("")
@@ -1176,7 +1288,7 @@ class PrintApp:
         self._render_preview(record["path"])
 
     def _on_select_pdf(self, _event):
-        if not self.allow_pdf_selection:
+        if not self.allow_pdf_selection or self.syncing_tree_selection:
             return
         selected = self.name_tree.selection()
         if not selected:
@@ -1184,8 +1296,14 @@ class PrintApp:
         if not selected:
             return
         iid = selected[0]
-        self.pdf_tree.selection_set(iid)
-        self.name_tree.selection_set(iid)
+        self.syncing_tree_selection = True
+        try:
+            if self.pdf_tree.selection() != (iid,):
+                self.pdf_tree.selection_set(iid)
+            if self.name_tree.selection() != (iid,):
+                self.name_tree.selection_set(iid)
+        finally:
+            self.syncing_tree_selection = False
         idx = int(iid.split("_")[1])
         if 0 <= idx < len(self.pdf_records):
             self._usar_record(self.pdf_records[idx])
@@ -1359,6 +1477,7 @@ class PrintApp:
         except Exception as exc:
             messagebox.showerror("Error de impresion", str(exc))
             return
+        self.impresion_iniciada = True
 
         if tanda["dorso"]:
             self.etapa_actual = "lista_para_dorso"
@@ -1380,6 +1499,7 @@ class PrintApp:
         except Exception as exc:
             messagebox.showerror("Error de impresion", str(exc))
             return
+        self.impresion_iniciada = True
 
         self.etapa_actual = "pendiente_confirmacion"
         self._set_estado(
@@ -1419,6 +1539,7 @@ class PrintApp:
         self.tandas = []
         self.tanda_actual_idx = -1
         self.etapa_actual = "sin_preparar"
+        self.impresion_iniciada = False
         self.progress.set(0)
         self._set_estado(
             "Estado reiniciado. Configura y prepara una nueva tanda.")
@@ -1460,12 +1581,20 @@ class PrintApp:
             pass
 
         config_enabled = estado_1
-        for w in (self.pdf_entry, self.printer_combo, self.entry_inicio, self.entry_tanda):
+        for w in (self.pdf_entry, self.entry_inicio, self.entry_tanda):
             w.configure(state="normal" if config_enabled else "disabled")
-        self.update_printer_button.configure(state="normal" if config_enabled else "disabled")
+
+        printer_enabled = not self.impresion_iniciada
+        self.printer_combo.configure(state="normal" if printer_enabled else "disabled")
+        self.update_printer_button.configure(state="normal" if printer_enabled else "disabled")
         self.read_pages_button.configure(state="normal" if estado_1 else "disabled",
                                          fg_color="#2f79b7" if estado_1 else "#94a3b8",
                                          hover_color="#245f91" if estado_1 else "#94a3b8")
+        self.remove_pdf_button.configure(
+            state="normal" if (estado_1 and len(self.pdf_records) > 0) else "disabled",
+            fg_color="#b91c1c" if (estado_1 and len(self.pdf_records) > 0) else "#94a3b8",
+            hover_color="#991b1b" if (estado_1 and len(self.pdf_records) > 0) else "#94a3b8",
+        )
 
         self.prepare_button.configure(state="normal" if estado_2 else "disabled",
                                       fg_color="#2f79b7" if estado_2 else "#94a3b8",
@@ -1482,13 +1611,13 @@ class PrintApp:
                                  fg_color="#2f79b7" if pendiente else "#94a3b8",
                                  hover_color="#245f91" if pendiente else "#94a3b8")
         self.stop_button.configure(
-            state="normal" if estado_3 else "disabled",
-            fg_color="#b45309" if estado_3 else "#94a3b8",
-            hover_color="#92400e" if estado_3 else "#94a3b8",
+            state="normal",
+            fg_color="#b45309",
+            hover_color="#92400e",
         )
-        self.reset_button.configure(state="normal" if estado_3 else "disabled",
-                                    fg_color="#64748b" if estado_3 else "#94a3b8",
-                                    hover_color="#475569" if estado_3 else "#94a3b8")
+        self.reset_button.configure(state="normal",
+                                    fg_color="#64748b",
+                                    hover_color="#475569")
         self.update_button.configure(state="normal",
                                      fg_color="#166534",
                                      hover_color="#14532d")
