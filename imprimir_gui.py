@@ -107,12 +107,36 @@ def obtener_version_local():
 
 
 def obtener_release_mas_reciente():
-    req = urllib.request.Request(
-        UPDATE_API_URL,
-        headers={"User-Agent": "BunkerPrintMasterGUI-Updater"},
-    )
-    with urllib.request.urlopen(req, timeout=20) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    headers = {
+        "User-Agent": "BunkerPrintMasterGUI-Updater",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    payload = None
+    try:
+        req = urllib.request.Request(UPDATE_API_URL, headers=headers)
+        with urllib.request.urlopen(req, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        # Si no hay release "latest" publicada, buscamos manualmente en /releases.
+        if exc.code == 404:
+            fallback_url = f"https://api.github.com/repos/{UPDATE_REPO_OWNER}/{UPDATE_REPO_NAME}/releases"
+            req = urllib.request.Request(fallback_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=20) as response:
+                releases = json.loads(response.read().decode("utf-8"))
+            if not isinstance(releases, list) or not releases:
+                raise RuntimeError(
+                    "No hay releases publicadas en GitHub. Publica una release para habilitar actualizaciones."
+                )
+            payload = releases[0]
+        elif exc.code == 403:
+            raise RuntimeError(
+                "GitHub API no disponible temporalmente (limite o acceso denegado). Intenta nuevamente en unos minutos."
+            ) from exc
+        else:
+            raise
+    except Exception as exc:
+        raise RuntimeError(f"No se pudo consultar GitHub Releases: {exc}") from exc
 
     tag_name = payload.get("tag_name") or payload.get("name") or "0.0.0"
     version = version_to_text(tag_name)
@@ -121,13 +145,14 @@ def obtener_release_mas_reciente():
     installer_asset = None
     for asset in assets:
         name = str(asset.get("name", ""))
-        if name.startswith("Setup-Bunker-Print-Master-GUI-") and name.endswith(".exe"):
+        name_lower = name.lower()
+        if name_lower.startswith("setup-bunker-print-master-gui-") and name_lower.endswith(".exe"):
             installer_asset = asset
             break
 
     if not installer_asset:
         raise RuntimeError(
-            "No se encontro el instalador en la ultima release.")
+            "No se encontro el instalador .exe en la ultima release publicada.")
 
     download_url = installer_asset.get("browser_download_url")
     if not download_url:
@@ -143,20 +168,31 @@ def obtener_release_mas_reciente():
 def descargar_archivo(url, destino):
     req = urllib.request.Request(
         url, headers={"User-Agent": "BunkerPrintMasterGUI-Updater"})
-    with urllib.request.urlopen(req, timeout=60) as response, open(destino, "wb") as out:
+    with urllib.request.urlopen(req, timeout=300) as response, open(destino, "wb") as out:
         shutil.copyfileobj(response, out)
 
 
 def ejecutar_instalador_silencioso(installer_path):
-    args = [
-        str(installer_path),
+    params = " ".join([
         "/VERYSILENT",
         "/SUPPRESSMSGBOXES",
         "/NORESTART",
         "/SP-",
         "/CLOSEAPPLICATIONS",
         "/RESTARTAPPLICATIONS",
-    ]
+    ])
+    if os.name == "nt":
+        try:
+            rc = ctypes.windll.shell32.ShellExecuteW(
+                None, "runas", str(installer_path), params, None, 1
+            )
+            if rc <= 32:
+                raise RuntimeError(f"No se pudo iniciar instalador (ShellExecuteW={rc})")
+            return
+        except Exception:
+            pass
+
+    args = [str(installer_path)] + params.split()
     subprocess.Popen(args, close_fds=True)
 
 

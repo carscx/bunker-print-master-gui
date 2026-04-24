@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1] - 2026-04-24
+
+### Fixed
+
+- Actualizador automatico reforzado para manejar repositorios sin `latest` disponible.
+- Fallback de consulta a `releases` cuando `releases/latest` devuelve 404.
+- Mensajes de error mas claros para escenarios de API (sin releases, limite, acceso denegado).
+- Deteccion del instalador `.exe` mas robusta en assets de release.
+- Descarga del instalador con timeout ampliado para conexiones lentas.
+- Lanzamiento del instalador con elevacion en Windows para mejorar tasa de exito.
+
 ## [1.4.0] - 2026-04-23
 
 ### Added
